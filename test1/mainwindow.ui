@@ -1,0 +1,201 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<ui version="4.0">
+ <class>MainWindow</class>
+ <widget class="QMainWindow" name="MainWindow">
+  <property name="geometry">
+   <rect>
+    <x>0</x>
+    <y>0</y>
+    <width>650</width>
+    <height>460</height>
+   </rect>
+  </property>
+  <property name="windowTitle">
+   <string>我的工具</string>
+  </property>
+  <widget class="QWidget" name="centralwidget">
+   <widget class="QTextEdit" name="textEdit">
+    <property name="geometry">
+     <rect>
+      <x>0</x>
+      <y>13</y>
+      <width>401</width>
+      <height>411</height>
+     </rect>
+    </property>
+   </widget>
+  </widget>
+  <widget class="QMenuBar" name="menubar">
+   <property name="geometry">
+    <rect>
+     <x>0</x>
+     <y>0</y>
+     <width>650</width>
+     <height>37</height>
+    </rect>
+   </property>
+   <widget class="QMenu" name="menu">
+    <property name="title">
+     <string>文件</string>
+    </property>
+    <addaction name="actionNew"/>
+    <addaction name="actionOpen"/>
+    <addaction name="actionSave"/>
+    <addaction name="actionSaveSomewhere"/>
+    <addaction name="actionQuit"/>
+   </widget>
+   <widget class="QMenu" name="menu_2">
+    <property name="title">
+     <string>关联变量分析</string>
+    </property>
+    <addaction name="actionShortDistanceAnalysis"/>
+    <addaction name="actionDependenceAnalysis"/>
+    <addaction name="actionBrotherAnalysis"/>
+    <addaction name="actionSimilarAnalysis"/>
+    <addaction name="action_IOAnalysis"/>
+    <addaction name="actionAll"/>
+   </widget>
+   <widget class="QMenu" name="menu_3">
+    <property name="title">
+     <string>分析</string>
+    </property>
+    <addaction name="actionHeadFiles"/>
+    <addaction name="action_IR"/>
+    <addaction name="actionBC"/>
+   </widget>
+   <addaction name="menu"/>
+   <addaction name="menu_2"/>
+   <addaction name="menu_3"/>
+  </widget>
+  <widget class="QStatusBar" name="statusbar"/>
+  <action name="actionNew">
+   <property name="text">
+    <string>新建</string>
+   </property>
+   <property name="toolTip">
+    <string>新建</string>
+   </property>
+   <property name="shortcut">
+    <string>Ctrl+N</string>
+   </property>
+  </action>
+  <action name="actionOpen">
+   <property name="text">
+    <string>打开</string>
+   </property>
+   <property name="toolTip">
+    <string>打开</string>
+   </property>
+   <property name="shortcut">
+    <string>Ctrl+O</string>
+   </property>
+  </action>
+  <action name="actionSave">
+   <property name="text">
+    <string>保存</string>
+   </property>
+   <property name="toolTip">
+    <string>保存</string>
+   </property>
+   <property name="shortcut">
+    <string>Ctrl+S</string>
+   </property>
+  </action>
+  <action name="actionQuit">
+   <property name="text">
+    <string>退出</string>
+   </property>
+   <property name="toolTip">
+    <string>退出</string>
+   </property>
+   <property name="shortcut">
+    <string>Ctrl+Q</string>
+   </property>
+  </action>
+  <action name="actionDependenceAnalysis">
+   <property name="text">
+    <string>数据依赖、控制依赖分析</string>
+   </property>
+   <property name="toolTip">
+    <string>数据依赖、控制依赖分析</string>
+   </property>
+  </action>
+  <action name="actionShortDistanceAnalysis">
+   <property name="text">
+    <string>较近访问距离分析</string>
+   </property>
+   <property name="toolTip">
+    <string>较近访问距离分析</string>
+   </property>
+  </action>
+  <action name="actionSimilarAnalysis">
+   <property name="text">
+    <string>相似名称分析</string>
+   </property>
+  </action>
+  <action name="action_IOAnalysis">
+   <property name="text">
+    <string>连续IO地址分析</string>
+   </property>
+   <property name="toolTip">
+    <string>连续IO地址分析</string>
+   </property>
+  </action>
+  <action name="actionBrotherAnalysis">
+   <property name="text">
+    <string>兄弟元素分析</string>
+   </property>
+   <property name="toolTip">
+    <string>兄弟元素分析</string>
+   </property>
+  </action>
+  <action name="actionAll">
+   <property name="text">
+    <string>综合分析</string>
+   </property>
+   <property name="toolTip">
+    <string>综合分析</string>
+   </property>
+  </action>
+  <action name="actionSaveSomewhere">
+   <property name="text">
+    <string>另存为</string>
+   </property>
+   <property name="toolTip">
+    <string>另存为</string>
+   </property>
+  </action>
+  <action name="action_IR">
+   <property name="text">
+    <string>生成程序IR</string>
+   </property>
+   <property name="toolTip">
+    <string>生成程序IR</string>
+   </property>
+   <property name="shortcut">
+    <string>Ctrl+1</string>
+   </property>
+  </action>
+  <action name="actionBC">
+   <property name="text">
+    <string>生成程序字节码</string>
+   </property>
+   <property name="toolTip">
+    <string>生成程序字节码</string>
+   </property>
+   <property name="shortcut">
+    <string>Ctrl+2</string>
+   </property>
+  </action>
+  <action name="actionHeadFiles">
+   <property name="text">
+    <string>设置头文件的路径</string>
+   </property>
+   <property name="toolTip">
+    <string>设置头文件的路径</string>
+   </property>
+  </action>
+ </widget>
+ <resources/>
+ <connections/>
+</ui>
