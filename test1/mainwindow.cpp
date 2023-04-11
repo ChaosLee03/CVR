@@ -7,15 +7,26 @@ MainWindow::MainWindow(QWidget *parent)
 {
     ui->setupUi(this);
 
-
-    setCentralWidget(ui->textEdit);//将MainWindow中的textEdit填充到整个窗口
+    resize(1200, 800);
+//    setCentralWidget(ui->textEdit);//将MainWindow中的textEdit填充到整个窗口
     setWindowIcon(QIcon(":/new/prefix1/QQ.png"));
+    QString rootpath = "/Users/mypc/Desktop";
+    dirmodel = new QFileSystemModel();
+    dirmodel->setRootPath(rootpath);
+
+    ui->treeView->setModel(dirmodel);
+    ui->treeView->resizeColumnToContents(0);
+
 }
 
 MainWindow::~MainWindow()
 {
     delete ui;
 }
+
+
+
+
 
 QString str2qstr(const std::string str)
 {
@@ -26,6 +37,7 @@ QString str2qstr(const std::string str)
 
 void MainWindow::Save() {
     //保存文件
+
     if (filename.isEmpty()) {
         QStringList ltFilePath;
         QFileDialog dialog(this, tr("Open Files"));
@@ -101,7 +113,7 @@ void MainWindow::on_actionOpen_triggered()
         filename = itr.next();
         qDebug() << filename.size() << "\n";
         QString fileName;
-        std::string a;
+//        std::string a;
         for (long long  i = 0; i < filename.size(); i++) {
             if (filename[i] == '/') {
                 fileName.append("//");
@@ -110,7 +122,6 @@ void MainWindow::on_actionOpen_triggered()
                 fileName.append(filename[i]);
             }
         }
-        filename = fileName;
         QFile myFile(fileName);//这里必须使用双下划线!!!
 
         if(!myFile.open(QIODevice::ReadOnly | QIODevice::Text)){
@@ -127,6 +138,21 @@ void MainWindow::on_actionOpen_triggered()
 
         ui->textEdit->setPlainText(m_Text);
         ui->statusbar->showMessage("文件路径："+filename);
+        qDebug() << filename << Qt::endl;
+        QString folderpath;
+        int flag = 0;
+        for (int i = filename.size() - 1; i >= 0; i--) {
+            if (filename[i] == '/') {
+                flag = i;
+                continue;
+            }
+            if (flag != 0) {
+                folderpath = filename.mid(0, flag + 1);
+                qDebug() << folderpath << Qt::endl;
+                break;
+            }
+        }
+
 }
 
 
@@ -179,13 +205,14 @@ void MainWindow::on_actionDependenceAnalysis_triggered()
 {
     //调用数据依赖、控制依赖分析
         QString fileName = filename;
+        qDebug() << fileName << "****adsfasf\n";
         if (fileName.contains(".c")) {
             fileName.replace(".c", ".bc");
         }
         else if (fileName.contains(".cpp")) {
             fileName.replace(".cpp", ".bc");
         }
-        if (!QFile::exists(fileName))
+
             MainWindow::on_actionBC_triggered();
         bool ok;
         QString text = QInputDialog::getText(this, tr("依赖分析"),tr("请输入一个程序里的全局变量"), QLineEdit::Normal,0, &ok);
@@ -199,17 +226,9 @@ void MainWindow::on_actionDependenceAnalysis_triggered()
         QString currentPath;
         int flag = 0;
         for (long long i = 0; i < fileName.size(); i++) {
-            if (fileName[i] == '/') {
-                flag++;
-                if (flag == 2) {
-                    flag = 0;
-                    continue;
-                }
+
                 currentPath.append(fileName[i]);
-            }
-            else {
-                currentPath.append(fileName[i]);
-            }
+
         }
         QStringList arguments;
         arguments << "-Varname=" + text << currentPath;
@@ -228,6 +247,7 @@ void MainWindow::on_actionDependenceAnalysis_triggered()
         qDebug() << "Standard Output: " << QString(output2);
         qDebug() << "Standard Error: " << QString(error);
         ui->statusbar->showMessage(output);
+        ui->textEdit_2->setPlainText(output);
 }
 
 
@@ -252,6 +272,7 @@ void MainWindow::on_actionShortDistanceAnalysis_triggered()
         qDebug() << "Standard Output: " << QString(output2);
         qDebug() << "Standard Error: " << QString(error);
         ui->statusbar->showMessage(output);
+        ui->textEdit_2->setPlainText(output);
 }
 
 
@@ -276,6 +297,7 @@ void MainWindow::on_actionSimilarAnalysis_triggered()
         qDebug() << "Standard Output: " << QString(output2);
         qDebug() << "Standard Error: " << QString(error);
         ui->statusbar->showMessage(output);
+        ui->textEdit_2->setPlainText(output);
 }
 
 
@@ -300,6 +322,7 @@ void MainWindow::on_action_IOAnalysis_triggered()
         qDebug() << "Standard Output: " << QString(output2);
         qDebug() << "Standard Error: " << QString(error);
         ui->statusbar->showMessage(output);
+        ui->textEdit_2->setPlainText(output);
 }
 
 
@@ -324,6 +347,7 @@ void MainWindow::on_actionBrotherAnalysis_triggered()
         qDebug() << "Standard Output: " << QString(output2);
         qDebug() << "Standard Error: " << QString(error);
         ui->statusbar->showMessage(output);
+        ui->textEdit_2->setPlainText(output);
 }
 
 
@@ -368,8 +392,8 @@ void MainWindow::on_actionSaveSomewhere_triggered()
         }
         QTextStream out(&myfile);
         QString mytext = ui->textEdit->toPlainText();
-        out << mytext;
-        QMessageBox::information(0, "提示", "文件保存成功！");
+
+        ui->statusbar->showMessage("文件保存成功！");
         myfile.close();
 }
 
@@ -498,5 +522,44 @@ bool ok;
             QMessageBox::information(0, "成功", "配置成功！");
     }
 
+}
+
+
+void MainWindow::on_treeView_clicked(const QModelIndex &index)
+{
+    QString spath = dirmodel->fileInfo(index).absoluteFilePath();
+    if (spath.contains(".c") || spath.contains(".cpp") || spath.contains(".txt")) {
+            filename = spath;
+        QString fileName;
+//        std::string a;
+        for (long long  i = 0; i < filename.size(); i++) {
+            if (filename[i] == '/') {
+                fileName.append("//");
+            }
+            else {
+                fileName.append(filename[i]);
+            }
+        }
+        QFile myFile(fileName);//这里必须使用双下划线!!!
+
+        if(!myFile.open(QIODevice::ReadOnly | QIODevice::Text)){
+            QMessageBox::warning(this, "警告", "打开文件失败！");
+            filename = "";
+            return;
+        }
+
+        QTextStream in(&myFile);
+
+        QString m_Text = in.readAll();
+
+        ui->textEdit->clear();
+
+        ui->textEdit->setPlainText(m_Text);
+        ui->statusbar->showMessage("文件路径："+filename);
+        qDebug() << filename << Qt::endl;
+    }
+    else {
+
+    }
 }
 
