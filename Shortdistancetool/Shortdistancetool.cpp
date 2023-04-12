@@ -45,7 +45,8 @@ std::string MiningResult = "MiningResult.txt";
 std::string MiningResultStr = "Str" + MiningResult;
 int distance = 7;
 int halfdistance = distance / 2;
-int togethernum = 0;
+int mysup = 2;
+int togethernum = 0; //总项数，代表了输入数据挖掘的所有项的数量 SUP%就是想要的数量/togethernum
 
 class MyVar {
 public:
@@ -222,10 +223,10 @@ void removeresultitems() {
         }
         llvm::outs() << "\n";
     }
-    for (auto a : removelinenum) {
-        llvm::outs() << a << " ";
-    }
-    llvm::outs() << "\n";
+//    for (auto a : removelinenum) {    //显示删除了哪些行
+//        llvm::outs() << a << " ";
+//    }
+//    llvm::outs() << "\n";
 
 
     
@@ -292,6 +293,8 @@ void CallMining(double Sup, double Confi) {
     cmd = cmd + "/Users/mypc/Downloads/PS/" + CollectedVarInfoFileNameId;
     cmd = cmd + " /Users/mypc/Downloads/PS/" + MiningResult;
     cmd = cmd + " " + std::to_string(Sup / togethernum) + " " + std::to_string(Confi);
+    llvm::outs() << cmd << "\n";
+    llvm::outs() << "Sup = " << Sup << " togethernum = " << togethernum << "\n";
     system(cmd.c_str());
 }
 
@@ -319,6 +322,7 @@ void WriteToMining() {
     }
     unsigned startline = vec[0].loc;
     unsigned endline = vec[n - 1].loc;
+    llvm::outs() << "startline = " << startline << " endline = " << endline << "\n";
     for (unsigned curline = startline; curline <= endline; curline++) {
         nearvar.clear();
         nearvarid.clear();
@@ -387,7 +391,7 @@ public:
 //        for(const auto &a : FuncVars) {
 //            llvm::outs() << a.name << " " << a.loc << "\n";
 //        }
-        llvm::outs() << "*******Function: " << decl->getNameAsString() << "\n";
+        llvm::outs() << "Function: " << decl->getNameAsString() << "\n";
         WriteToMining();
         
         return true;
@@ -471,7 +475,7 @@ public:
         FilesClear();
         MV.TraverseDecl(Ctx.getTranslationUnitDecl());
         WriteToFile();
-        CallMining(distance * 2, 0.8);
+        CallMining(mysup * halfdistance, 0.8); //Sup的设置:
         TransResultIdToStr();
         Resultsort();
         removeresultitems();
@@ -481,7 +485,6 @@ public:
         return ;
     }
 };
-
 class MyFrontedAction : public ASTFrontendAction {
 public:
     std::unique_ptr<ASTConsumer> CreateASTConsumer(CompilerInstance &CI, StringRef InFile) override {

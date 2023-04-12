@@ -117,13 +117,15 @@ void findDef(LLVMDependenceGraph *dg, LLVMNode *node) {
             LLVMNode *top = nodeque.front();
             nodeque.pop();
             if (isa<GlobalVariable>(top->getValue())) {
-                if (myset.find(top->getValue()) == myset.end() && n != 1) {
+                if (myset.find(top->getValue()) == myset.end() && n != 2) {
+                    outs() << "n = " << n << "\n";
+                    outs() << top->getValue()->getName() << "\n";
                     myset.insert(top->getValue());
                     vec.push_back(top->getValue());
                 }
             }
             if (auto *allcoinst = dyn_cast<AllocaInst>(top->getValue())) {
-                if (myset.find(top->getValue()) == myset.end() && n != 1) {
+                if (myset.find(top->getValue()) == myset.end() && n != 2) {
                     myset.insert(top->getValue());
                     vec.push_back(top->getValue());
                 }
@@ -276,6 +278,7 @@ int main(int argc, char *argv[]) {
             }
         }
     }
+    
     outs() << lookingforname << "数据依赖于: ";
     for (auto a : vec) {
         if (a->hasName()) {
@@ -285,7 +288,7 @@ int main(int argc, char *argv[]) {
             outs() << *a << " ";
         }
     }
-
+    //if, else, switch, while, for
     outs() << "\n" << lookingforname << "控制依赖于: ";
     for (auto a : controldefvec) {
 

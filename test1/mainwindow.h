@@ -1,6 +1,8 @@
 #ifndef MAINWINDOW_H
 #define MAINWINDOW_H
 
+#include "QtWidgets/qtreewidget.h"
+#include "codeeditor.h"
 #include <QMainWindow>
 #include <QFileDialog>
 #include <QFile>
@@ -9,6 +11,8 @@
 #include <qinputdialog.h>
 #include <QProcess>
 #include <iostream>
+#include <QFileSystemModel>
+
 
 
 QT_BEGIN_NAMESPACE
@@ -56,9 +60,14 @@ private slots:
 
     void on_actionHeadFiles_triggered();
 
+    void on_treeView_clicked(const QModelIndex &index);
+
 private:
     Ui::MainWindow *ui;
     QString filename;//文件的路径加名称
+
     QString headfileloc = tr("/Library/Developer/CommandLineTools/SDKs/MacOSX13.0.sdk/usr/include");//头文件的地址
+    QFileSystemModel *dirmodel;
+    CodeEditor *codeeditor;
 };
 #endif // MAINWINDOW_H
