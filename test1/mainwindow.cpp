@@ -16,7 +16,9 @@ MainWindow::MainWindow(QWidget *parent)
 
     ui->treeView->setModel(dirmodel);
     ui->treeView->resizeColumnToContents(0);
-
+    codeeditor = new CodeEditor(ui->textEdit);
+    codeeditor->setMinimumWidth(1000);
+    codeeditor->setMinimumHeight(600);
 }
 
 MainWindow::~MainWindow()
@@ -101,7 +103,8 @@ void MainWindow::on_actionOpen_triggered()
 {
     //打开文件
 
-    ui->textEdit->clear();
+//    ui->textEdit->clear();
+    codeeditor->clear();
         QStringList ltFilePath;
         QFileDialog dialog(this, tr("Open Files"));
         dialog.setAcceptMode(QFileDialog::AcceptOpen);  ///< 打开文件
@@ -134,9 +137,11 @@ void MainWindow::on_actionOpen_triggered()
 
         QString m_Text = in.readAll();
 
-        ui->textEdit->clear();
+//        ui->textEdit->clear();
+        codeeditor->clear();
 
-        ui->textEdit->setPlainText(m_Text);
+//        ui->textEdit->setPlainText(m_Text);
+        codeeditor->setPlainText(m_Text);
         ui->statusbar->showMessage("文件路径："+filename);
         qDebug() << filename << Qt::endl;
         QString folderpath;
@@ -186,8 +191,8 @@ void MainWindow::on_actionSave_triggered()
             fileName += dialog.selectedNameFilter();
         }
 
-        qDebug() << filename;
-        QFile myfile(filename);
+        qDebug() << fileName;
+        QFile myfile(fileName);
         if (!myfile.open(QIODevice::WriteOnly | QIODevice::Text)) {
             QMessageBox::warning(0, "警告", "保存文件失败!");
             return;
@@ -413,17 +418,9 @@ void MainWindow::on_actionBC_triggered()
         QString currentPath;
         int flag = 0;
         for (long long i = 0; i < filename.size(); i++) {
-            if (filename[i] == '/') {
-                flag++;
-                if (flag == 2) {
-                    flag = 0;
-                    continue;
-                }
-                currentPath.append(filename[i]);
-            }
-            else {
-                currentPath.append(filename[i]);
-            }
+
+            currentPath.append(filename[i]);
+
         }
         QString targetPath = currentPath;
         if (currentPath.contains(".c")) {
@@ -437,7 +434,7 @@ void MainWindow::on_actionBC_triggered()
             return;
         }
         QStringList arguments;
-        arguments << "-emit-llvm" << "-c" << currentPath << "-I" << headfileloc <<  "-o" << targetPath;
+        arguments << "-emit-llvm" << "-c" << currentPath << "-I" << headfileloc << "-o" << targetPath;
         qDebug() << arguments << "\n";
         QString command = "clang " + arguments.join(" ");
         qDebug() << command;
@@ -469,18 +466,9 @@ void MainWindow::on_action_IR_triggered()
         QString currentPath;
         int flag = 0;
         for (long long i = 0; i < filename.size(); i++) {
-            if (filename[i] == '/') {
-                flag++;
-                if (flag == 2) {
-                    flag = 0;
-                    continue;
-                }
                 currentPath.append(filename[i]);
-            }
-            else {
-                currentPath.append(filename[i]);
-            }
         }
+
         QString targetPath = currentPath;
         if (currentPath.contains(".c")) {
             targetPath.replace(".c", ".ll");
@@ -493,7 +481,7 @@ void MainWindow::on_action_IR_triggered()
             return;
         }
         QStringList arguments;
-        arguments << "-emit-llvm" << "-S" << currentPath << "-I" << headfileloc <<  "-o" << targetPath;
+        arguments << "-emit-llvm" << "-S" << currentPath << "-I" << headfileloc << "-g" << "-o" << targetPath;
         qDebug() << arguments << "\n";
         QString command = "clang " + arguments.join(" ");
         qDebug() << command;  // 输出 "clang -emit-llvm -S hello.c -o hello.ll"

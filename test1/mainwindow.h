@@ -2,6 +2,7 @@
 #define MAINWINDOW_H
 
 #include "QtWidgets/qtreewidget.h"
+#include "codeeditor.h"
 #include <QMainWindow>
 #include <QFileDialog>
 #include <QFile>
@@ -67,5 +68,6 @@ private:
 
     QString headfileloc = tr("/Library/Developer/CommandLineTools/SDKs/MacOSX13.0.sdk/usr/include");//头文件的地址
     QFileSystemModel *dirmodel;
+    CodeEditor *codeeditor;
 };
 #endif // MAINWINDOW_H

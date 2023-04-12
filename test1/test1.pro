@@ -9,14 +9,20 @@ CONFIG += c++17
 #DEFINES += QT_DISABLE_DEPRECATED_BEFORE=0x060000    # disables all the APIs deprecated before Qt 6.0.0
 
 SOURCES += \
+    codeeditor.cpp \
     main.cpp \
-    mainwindow.cpp
+    mainwindow.cpp \
+    newmainwindow.cpp
 
 HEADERS += \
-    mainwindow.h
+    LineNumberArea.h \
+    codeeditor.h \
+    mainwindow.h \
+    newmainwindow.h
 
 FORMS += \
-    mainwindow.ui
+    mainwindow.ui \
+    newmainwindow.ui
 
 TRANSLATIONS += \
     test1_zh_CN.ts
