@@ -116,7 +116,6 @@ void MainWindow::on_actionOpen_triggered()
         filename = itr.next();
         qDebug() << filename.size() << "\n";
         QString fileName;
-//        std::string a;
         for (long long  i = 0; i < filename.size(); i++) {
             if (filename[i] == '/') {
                 fileName.append("//");
@@ -132,15 +131,9 @@ void MainWindow::on_actionOpen_triggered()
             filename = "";
             return;
         }
-
         QTextStream in(&myFile);
-
         QString m_Text = in.readAll();
-
-//        ui->textEdit->clear();
         codeeditor->clear();
-
-//        ui->textEdit->setPlainText(m_Text);
         codeeditor->setPlainText(m_Text);
         ui->statusbar->showMessage("文件路径："+filename);
         qDebug() << filename << Qt::endl;
@@ -189,16 +182,26 @@ void MainWindow::on_actionSave_triggered()
                 }
             }
             fileName += dialog.selectedNameFilter();
+            filename += dialog.selectedNameFilter();
         }
-
-        qDebug() << fileName;
+        else {
+            for (long long  i = 0; i < filename.size(); i++) {
+                if (filename[i] == '/') {
+                    fileName.append("//");
+                }
+                else {
+                    fileName.append(filename[i]);
+                }
+            }
+        }
+        qDebug() << fileName << "\n";
         QFile myfile(fileName);
         if (!myfile.open(QIODevice::WriteOnly | QIODevice::Text)) {
             QMessageBox::warning(0, "警告", "保存文件失败!");
             return;
         }
         QTextStream out(&myfile);
-        QString mytext = ui->textEdit->toPlainText();
+        QString mytext = codeeditor->toPlainText();
         out << mytext;
         QMessageBox::information(0, "提示", "文件保存成功！");
         myfile.close();
@@ -515,6 +518,7 @@ bool ok;
 
 void MainWindow::on_treeView_clicked(const QModelIndex &index)
 {
+    //点击文件目录树
     QString spath = dirmodel->fileInfo(index).absoluteFilePath();
     if (spath.contains(".c") || spath.contains(".cpp") || spath.contains(".txt")) {
             filename = spath;
@@ -540,9 +544,11 @@ void MainWindow::on_treeView_clicked(const QModelIndex &index)
 
         QString m_Text = in.readAll();
 
-        ui->textEdit->clear();
+//        ui->textEdit->clear();
+        codeeditor->clear();
 
-        ui->textEdit->setPlainText(m_Text);
+//        ui->textEdit->setPlainText(m_Text);
+        codeeditor->setPlainText(m_Text);
         ui->statusbar->showMessage("文件路径："+filename);
         qDebug() << filename << Qt::endl;
     }
@@ -551,3 +557,133 @@ void MainWindow::on_treeView_clicked(const QModelIndex &index)
     }
 }
 
+
+void MainWindow::on_actionLLVMStyle_triggered()
+{
+    //LLVM风格
+    if (filename.isEmpty()) {
+        QMessageBox::warning(0, "警告", "没有选择文件或未保存文件!");
+        on_actionSave_triggered();
+        return;
+    }
+    makestyle(1);
+
+}
+
+
+void MainWindow::on_actionGoogleStyle_triggered()
+{
+    //Google风格
+    if (filename.isEmpty()) {
+        QMessageBox::warning(0, "警告", "没有选择文件或未保存文件!");
+        on_actionSave_triggered();
+        return;
+    }
+    makestyle(2);
+}
+
+
+void MainWindow::on_actionChromiumStyle_triggered()
+{
+    //Chromium风格
+    if (filename.isEmpty()) {
+        QMessageBox::warning(0, "警告", "没有选择文件或未保存文件!");
+        on_actionSave_triggered();
+        return;
+    }
+    makestyle(3);
+}
+
+
+void MainWindow::on_actionMozillaStyle_triggered()
+{
+    //MozillaS风格
+    if (filename.isEmpty()) {
+        QMessageBox::warning(0, "警告", "没有选择文件或未保存文件!");
+        on_actionSave_triggered();
+        return;
+    }
+    makestyle(4);
+}
+
+
+void MainWindow::on_actionWebKitStyle_triggered()
+{
+    //WebKit风格
+    if (filename.isEmpty()) {
+        QMessageBox::warning(0, "警告", "没有选择文件或未保存文件!");
+        on_actionSave_triggered();
+        return;
+    }
+    makestyle(5);
+}
+
+
+void MainWindow::on_actionMicrosoftStyle_triggered()
+{
+    //Microsoft风格
+    if (filename.isEmpty()) {
+        QMessageBox::warning(0, "警告", "没有选择文件或未保存文件!");
+        on_actionSave_triggered();
+        return;
+    }
+    makestyle(6);
+}
+
+
+void MainWindow::on_actionGNUStyle_triggered()
+{
+    //GNU风格
+    if (filename.isEmpty()) {
+        QMessageBox::warning(0, "警告", "没有选择文件或未保存文件!");
+        on_actionSave_triggered();
+        qDebug() << filename << "\n";
+        return;
+    }
+    makestyle(7);
+}
+
+void MainWindow::makestyle(int style) {
+    QStringList arguments;
+    if (filename.isEmpty()) {
+        QMessageBox::warning(0, "警告", "失败");
+        return;
+    }
+    if (style == 1) {
+        arguments << "-style=LLVM" << filename;
+    }
+    else if (style == 2) {
+        arguments << "-style=Google" << filename;
+    }
+    else if (style == 3) {
+        arguments << "-style=Chromium" << filename;
+    }
+    else if (style == 4) {
+        arguments << "-style=Mozilla" << filename;
+    }
+    else if (style == 5) {
+        arguments << "-style=WebKit" << filename;
+    }
+    else if (style == 6) {
+        arguments << "-style=Microsoft" << filename;
+    }
+    else {
+        arguments << "-style=GNU" << filename;
+    }
+    QString command = "clang-format " + arguments.join(" ");
+    qDebug() << command << "\n";
+    QProcess process;
+    QString dependecenPass = QDir::currentPath() + tr("/clang-format");
+    QString fileDir = QFileInfo(filename).absoluteDir().path();
+    qDebug() << fileDir << "\n";
+    process.start(dependecenPass, arguments);
+    process.waitForFinished();
+    QString output = process.readAllStandardOutput();
+    QByteArray error = process.readAllStandardError();
+
+    // 将字节序列转换为字符串并输出
+    qDebug() << "Standard Output: " << output;
+    qDebug() << "Standard Error: " << QString(error);
+    codeeditor->clear();
+    codeeditor->setPlainText(output);
+}
