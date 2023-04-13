@@ -25,6 +25,7 @@ class MainWindow : public QMainWindow
 
 public:
     MainWindow(QWidget *parent = nullptr);
+    void makestyle(int style);
     ~MainWindow();
 
 private slots:
@@ -61,6 +62,20 @@ private slots:
     void on_actionHeadFiles_triggered();
 
     void on_treeView_clicked(const QModelIndex &index);
+
+    void on_actionLLVMStyle_triggered();
+
+    void on_actionGoogleStyle_triggered();
+
+    void on_actionChromiumStyle_triggered();
+
+    void on_actionMozillaStyle_triggered();
+
+    void on_actionWebKitStyle_triggered();
+
+    void on_actionMicrosoftStyle_triggered();
+
+    void on_actionGNUStyle_triggered();
 
 private:
     Ui::MainWindow *ui;
