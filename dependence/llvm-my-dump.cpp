@@ -1,6 +1,7 @@
 #include <fstream>
 #include <iostream>
 #include <set>
+#include <map>
 #include <sstream>
 #include <string>
 #include <queue>
@@ -9,6 +10,8 @@
 #include <cstdio>
 
 #include <llvm/IR/Instructions.h>
+#include <llvm/IR/DebugInfoMetadata.h>
+#include <llvm/IR/InstIterator.h>
 #include <llvm/IR/LLVMContext.h>
 #include <llvm/IR/Module.h>
 #include <llvm/Support/raw_ostream.h>
@@ -107,6 +110,7 @@ vector<Value*> convec;
 set<Value*> myconset;
 vector<Value*> controldefvec;
 set<Value*> mycondefset;
+map<const llvm::Value *, std::string> valuesToVariables;
 void findDef(LLVMDependenceGraph *dg, LLVMNode *node) {
     queue<LLVMNode*> nodeque;
     nodeque.push(node);
@@ -117,20 +121,19 @@ void findDef(LLVMDependenceGraph *dg, LLVMNode *node) {
             LLVMNode *top = nodeque.front();
             nodeque.pop();
             if (isa<GlobalVariable>(top->getValue())) {
-                if (myset.find(top->getValue()) == myset.end() && n != 2) {
-                    outs() << "n = " << n << "\n";
-                    outs() << top->getValue()->getName() << "\n";
+                if (myset.find(top->getValue()) == myset.end() && n != 1) {
                     myset.insert(top->getValue());
                     vec.push_back(top->getValue());
                 }
+                n++;
             }
             if (auto *allcoinst = dyn_cast<AllocaInst>(top->getValue())) {
-                if (myset.find(top->getValue()) == myset.end() && n != 2) {
+                if (myset.find(top->getValue()) == myset.end()) {
                     myset.insert(top->getValue());
                     vec.push_back(top->getValue());
                 }
             }
-            n++;
+            
             for (auto black = top->user_begin(); black != top->user_end(); black++) {
 //                outs() << *black << "\n";
 //                outs() << black << "\n";
@@ -143,33 +146,88 @@ void findDef(LLVMDependenceGraph *dg, LLVMNode *node) {
     }
 }
 void findDef2(LLVMDependenceGraph *dg, LLVMNode *node) {
+    outs() << "*****************\n";
     queue<LLVMNode*> nodeque;
     nodeque.push(node);
-    int n = 1;
+    int flag = 0;//每次只进一个变量，找到了就不往下继续找依赖的变量了
     while (!nodeque.empty()) {
         int length = nodeque.size();
         for (int i = 0; i < length; i++) {
             LLVMNode *top = nodeque.front();
             nodeque.pop();
             if (isa<GlobalVariable>(top->getValue())) {
-                if (mycondefset.find(top->getValue()) == mycondefset.end() && n != 1) {
+                if (mycondefset.find(top->getValue()) == mycondefset.end()) {
                     mycondefset.insert(top->getValue());
                     controldefvec.push_back(top->getValue());
+                    if (top->getValue()->hasName()) {
+                        outs() << top->getValue()->getName() << "\n";
+                    }
+                    else
+                        outs() << valuesToVariables[top->getValue()] << "\n";
+                    break;
                 }
             }
             if (auto *allcoinst = dyn_cast<AllocaInst>(top->getValue())) {
-                if (mycondefset.find(top->getValue()) == mycondefset.end() && n != 1) {
+                if (mycondefset.find(top->getValue()) == mycondefset.end()) {
                     mycondefset.insert(top->getValue());
                     controldefvec.push_back(top->getValue());
+                    if (top->getValue()->hasName()) {
+                        outs() << top->getValue()->getName() << "\n";
+                    }
+                    else
+                        outs() << valuesToVariables[top->getValue()] << "\n";
+                    break;
                 }
             }
-            n++;
             for (auto black = top->user_begin(); black != top->user_end(); black++) {
 //                outs() << *black << "\n";
-//                outs() << black << "\n";
+                
+//                outs() << "for black循环" << ": ";
+//                outs() << *top->getValue()<< "\n";
+                
+                if (auto inst = dyn_cast<Instruction>(top->getValue())) {
+                    outs() << *inst << "\n";
+                    int nums = inst->getNumOperands();
+                    for (int i = 0; i < nums; i++) {
+                        auto a = inst->getOperand(i);
+                        if (isa<GlobalVariable>(a)) {
+                            flag++;
+                            break;
+                        }
+                        if (auto *allcoinst = dyn_cast<AllocaInst>(a)) {
+                            flag++;
+                            break;
+                        }
+                    }
+                    if (flag == 2)
+                        break;
+                }
+                
                 nodeque.push(*black);
             }
             for (auto gray = top->rev_data_begin(); gray != top->rev_data_end(); gray++) {
+                
+//                outs() << "for gray循环" << ": ";
+//                outs() << *top->getValue()<< "\n";
+                
+                
+                if (auto inst = dyn_cast<Instruction>(top->getValue())) {
+                    outs() << *inst << "\n";
+                    int nums = inst->getNumOperands();
+                    for (int i = 0; i < nums; i++) {
+                        auto a = inst->getOperand(i);
+                        if (isa<GlobalVariable>(a)) {
+                            flag++;
+                            break;
+                        }
+                        if (auto *allcoinst = dyn_cast<AllocaInst>(a)) {
+                            flag++;
+                            break;
+                        }
+                    }
+                    if (flag == 2)
+                        break;
+                }
                 nodeque.push(*gray);
             }
         }
@@ -185,11 +243,11 @@ void findcontrol(LLVMDependenceGraph *dg, LLVMNode *node) {
             LLVMNode *top = nodeque.front();
             nodeque.pop();
             if (myconset.find(top->getValue()) == myconset.end() && n != 1) {
-                convec.push_back(top->getValue());
+//                convec.push_back(top->getValue());
                 findDef2(dg, top);
                 myconset.insert(top->getValue());
             }
-            n++;
+            n++; //去掉第一个节点，可能是个store指令
             auto bblock = top->getBBlock()->revControlDependence();
             for (auto b = bblock.begin(); b != bblock.end(); b++) {
                 auto nodes = (*b)->getNodes();
@@ -252,7 +310,20 @@ int main(int argc, char *argv[]) {
 //    llvm::outs() << "输出参数：" << lookingforname << "\n";
 
     auto mygraph = dg.get();
-    
+    for (const auto &it : getConstructedFunctions()) {
+            for (auto &I :
+                 llvm::instructions(*llvm::cast<llvm::Function>(it.first))) {
+                if (const llvm::DbgDeclareInst *DD =
+                            llvm::dyn_cast<llvm::DbgDeclareInst>(&I)) {
+                    auto *val = DD->getAddress();
+                    valuesToVariables[val] = DD->getVariable()->getName().str();
+                } else if (const llvm::DbgValueInst *DV =
+                                   llvm::dyn_cast<llvm::DbgValueInst>(&I)) {
+                    auto *val = DV->getValue();
+                    valuesToVariables[val] = DV->getVariable()->getName().str();
+                }
+            }
+        }
 
     for(auto &p : *dg) {
         if (p.first) {
@@ -274,6 +345,7 @@ int main(int argc, char *argv[]) {
 //                            llvm::outs() << *((*a)->getValue()) << "\n";
 //                        }
                     }
+                    
                 }
             }
         }
@@ -285,7 +357,14 @@ int main(int argc, char *argv[]) {
             outs() << a->getName() << " ";
         }
         else {
-            outs() << *a << " ";
+            auto name = valuesToVariables.find(a);
+            if (name != valuesToVariables.end()) {
+                outs() << name->second << " ";
+            }
+            else {
+                outs() << *a << " ";
+            }
+            
         }
     }
     //if, else, switch, while, for
@@ -296,8 +375,28 @@ int main(int argc, char *argv[]) {
             outs() << a->getName().str() << " ";
         }
         else {
-            outs() << *a << " ";
+            auto name = valuesToVariables.find(a);
+            if (name != valuesToVariables.end()) {
+                outs() << name->second << " ";
+            }
+            else {
+                outs() << *a << " ";
+            }
         }
     }
+//    for (auto &a : myconset) {    //输出依赖的指令都有哪些
+//        if (a->hasName()) {
+//                    outs() << a->getName().str() << " ";
+//                }
+//                else {
+//                    auto name = valuesToVariables.find(a);
+//                    if (name != valuesToVariables.end()) {
+//                        outs() << name->second << " ";
+//                    }
+//                    else {
+//                        outs() << *a << " ";
+//                    }
+//                }
+//    }
     return 0;
 }
