@@ -146,7 +146,6 @@ void findDef(LLVMDependenceGraph *dg, LLVMNode *node) {
     }
 }
 void findDef2(LLVMDependenceGraph *dg, LLVMNode *node) {
-    outs() << "*****************\n";
     queue<LLVMNode*> nodeque;
     nodeque.push(node);
     int flag = 0;//每次只进一个变量，找到了就不往下继续找依赖的变量了
@@ -159,11 +158,6 @@ void findDef2(LLVMDependenceGraph *dg, LLVMNode *node) {
                 if (mycondefset.find(top->getValue()) == mycondefset.end()) {
                     mycondefset.insert(top->getValue());
                     controldefvec.push_back(top->getValue());
-                    if (top->getValue()->hasName()) {
-                        outs() << top->getValue()->getName() << "\n";
-                    }
-                    else
-                        outs() << valuesToVariables[top->getValue()] << "\n";
                     break;
                 }
             }
@@ -171,11 +165,6 @@ void findDef2(LLVMDependenceGraph *dg, LLVMNode *node) {
                 if (mycondefset.find(top->getValue()) == mycondefset.end()) {
                     mycondefset.insert(top->getValue());
                     controldefvec.push_back(top->getValue());
-                    if (top->getValue()->hasName()) {
-                        outs() << top->getValue()->getName() << "\n";
-                    }
-                    else
-                        outs() << valuesToVariables[top->getValue()] << "\n";
                     break;
                 }
             }
@@ -186,7 +175,6 @@ void findDef2(LLVMDependenceGraph *dg, LLVMNode *node) {
 //                outs() << *top->getValue()<< "\n";
                 
                 if (auto inst = dyn_cast<Instruction>(top->getValue())) {
-                    outs() << *inst << "\n";
                     int nums = inst->getNumOperands();
                     for (int i = 0; i < nums; i++) {
                         auto a = inst->getOperand(i);
@@ -212,7 +200,6 @@ void findDef2(LLVMDependenceGraph *dg, LLVMNode *node) {
                 
                 
                 if (auto inst = dyn_cast<Instruction>(top->getValue())) {
-                    outs() << *inst << "\n";
                     int nums = inst->getNumOperands();
                     for (int i = 0; i < nums; i++) {
                         auto a = inst->getOperand(i);
