@@ -30,6 +30,11 @@ class GlobalVarInfo{
     map<DILocation*, string> linesRW;
     //描述该变量，因为GlobalVariable不能被继承，所以用作成员变量
     GlobalVariable *GV;
+    //如果是数组或结构体的话，自定义一个更精确的名称覆盖GV中的名称，
+    string name;
+    //判断是否是普通变量，普通变量使用相似命名分析，结构体和数组使用兄弟元素分析
+    //flag = 1表示是普通变量
+    int flag;
 public:
     //构造函数
     GlobalVarInfo(GlobalVariable *GV) : GV(GV) {}
@@ -39,17 +44,25 @@ public:
     void addlines(DILocation *loc, string rw) {linesRW[loc] = rw;}
     //获取GlobalVariable
     GlobalVariable* getVariable() {return GV;}
+    //设置名称
+    void setname(string n) {name = n;}
+    //获取名称
+    string getName() {return name;}
+    //设置标志
+    void setflag(int f) {flag = f;}
+    //获取标志
+    int getflag() {return flag;}
 };
 //相似命名分析
 void similarnameAnalysis(vector<GlobalVarInfo*> v);
 //依赖分析
 void dependenceAnalysis();
 //兄弟元素分析
-void brotherAnalysis();
+void brotherAnalysis(vector<GlobalVarInfo*> v);
 //访问距离分析
-void distanceAnalysis();
+void distanceAnalysis(vector<GlobalVarInfo*> v);
 //连续IO分析
-void IOAnalysis();
+void IOAnalysis(vector<GlobalVarInfo*> v);
 //遍历所有指令，寻找全局变量
 //定义一个 ModulePass
 struct Mypass : public ModulePass {
@@ -105,6 +118,7 @@ struct Mypass : public ModulePass {
                         }
                         //判断是数组还是结构体，两者需要区别开来
                         if (auto *PT = dyn_cast<PointerType>(G.getType())) {
+                            string fullName;
                             if (auto *ST = dyn_cast<StructType>(PT->getElementType())) {
                                 //处理结构体
                                 string structVarName = G.getName().str();
@@ -113,16 +127,15 @@ struct Mypass : public ModulePass {
                                 std::string fieldName;
                                 if (auto *StructElementTy = dyn_cast<StructType>(ST->getElementType(fieldIdx)))
                                     fieldName = StructElementTy->getName().str();
-                                string fullName = structVarName + "." + fieldName;
-                                GlobalVarInfo *g = new GlobalVarInfo(&G);
-                                DILocation *loc = I->getDebugLoc();
-                                g->addlines(loc, rw);
-                                globalvarlist.push_back(g);
+                                fullName = structVarName + "." + fieldName;
+                                //FIXME: 结构体里面是结构体或是数组还没有考虑到
                             }
                             if (auto *AT = dyn_cast<ArrayType>(PT->getElementType())) {
                                 //处理数组
                                 string arrayVarName = G.getName().str();
-                                string fullName = arrayVarName;
+                                fullName = arrayVarName;
+                                //FIXME: 数组内容是结构体或二维数组还没有考虑到
+                                
                                 if (auto *Idx = GEPOp->getOperand(2)) {
                                     if (auto *CIdx = dyn_cast<ConstantInt>(Idx)) {
                                         unsigned idx = CIdx->getZExtValue();
@@ -135,11 +148,14 @@ struct Mypass : public ModulePass {
                                         fullName += "[i]";
                                     }
                                 }
-                                GlobalVarInfo *g = new GlobalVarInfo(&G);
-                                DILocation *loc = I->getDebugLoc();
-                                g->addlines(loc, rw);
-                                globalvarlist.push_back(g);
+                                
                             }
+                            GlobalVarInfo *g = new GlobalVarInfo(&G);
+                            DILocation *loc = I->getDebugLoc();
+                            g->setname(fullName);
+                            g->addlines(loc, rw);
+                            g->setflag(0);//0表示数组或结构体
+                            globalvarlist.push_back(g);
                         }
 
                     }
@@ -149,7 +165,11 @@ struct Mypass : public ModulePass {
         //遍历globalvarlist
         //FIXME: 现在列号还是有问题，不能准确定位
         for (auto g : globalvarlist) {
-            errs() << "变量名： " << g->getVariable()->getName() << "\n";
+            if (g->getflag() == 1)
+                errs() << "变量名： " << g->getVariable()->getName() << "\n";
+            else {
+                errs() << "变量名： " << g->getName() << "\n";
+            }
             errs() << "变量类型: " << *g->getVariable()->getType() << "\n";
             for (auto p : g->getRWLoc()) {
                 errs() << "所在行号" << p.first->getLine() << " 所在列号" << p.first->getColumn() << "\n";
@@ -163,6 +183,17 @@ struct Mypass : public ModulePass {
         //使用收集到的变量进行相似命名分析
     }
     
+    void brotherAnalysis(vector<GlobalVarInfo*> v) {
+        
+    }
+    
+    void distanceAnalysis(vector<GlobalVarInfo*> v) {
+        
+    }
+    
+    void IOAnalysis(vector<GlobalVarInfo*> v) {
+        
+    }
 };
 }
 char Mypass::ID = 0;
