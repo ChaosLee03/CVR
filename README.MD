@@ -6,3 +6,4 @@
   5.Brothertool下存放Brothertool.cpp与CMakeLists.txt  
   6.Iotool下存放Iotool.cpp与CMakeLists.txt  (各tool.cpp原本存放在llvm/tools/clang/tools下)  
 
+  7.Pass下存放整合版内容，把上面所有部分集合在一个程序中  
