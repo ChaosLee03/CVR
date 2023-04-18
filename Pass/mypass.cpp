@@ -4,6 +4,9 @@
 #include "llvm/IR/Function.h"
 #include "llvm/IR/DebugInfoMetadata.h"
 #include "llvm/IR/Instructions.h"
+#include "llvm/IR/IntrinsicInst.h"
+#include "llvm/IR/DebugInfoMetadata.h"
+#include "llvm/IR/Metadata.h"
 #include "llvm/Analysis/DependenceAnalysis.h"
 #include "llvm/Analysis/MemoryDependenceAnalysis.h"
 #include "llvm/Support/CommandLine.h"
@@ -11,13 +14,16 @@
 #include "llvm/Analysis/LoopInfo.h"
 #include "llvm/Analysis/AliasAnalysis.h"
 #include "llvm/Support/raw_ostream.h"
+#include "llvm/Support/Debug.h"
 #include <set>
 #include <map>
 
 using namespace llvm;
 using namespace std;
 
-
+/*
+ TODO: 目前需要处理二维数组，结构体数组，结构体里有数组，结构体里有结构体
+ */
 
 namespace {
 
@@ -86,7 +92,7 @@ struct Mypass : public ModulePass {
                         // 这里需要根据具体情况进行分析，如何判断读写类型
                         string rw;
                         if (isa<StoreInst>(I)) {
-                            rw = 'W'; // 这里的&L是取地址
+                            rw = 'W';
                         }
                         else if (isa<LoadInst>(I)) {
                             rw = 'R';
@@ -106,13 +112,13 @@ struct Mypass : public ModulePass {
                         string rw;
                         Instruction *I;
                         if (I = dyn_cast<Instruction>(U2.getUser())) {
-                        // 如果指令是 StoreInst，那么就是读，否则是写
+                        // 如果指令是 StoreInst，那么就是写，否则是读
                             if (auto *Store = dyn_cast<StoreInst>(I)) {
-                                //读结构体/数组
+                                //写结构体/数组
                                 rw += 'W';
                             }
                             if (auto *Load = dyn_cast<LoadInst>(I)) {
-                                //写结构体/数组
+                                //读结构体/数组
                                 rw += 'R';
                             }
                         }
@@ -123,31 +129,66 @@ struct Mypass : public ModulePass {
                                 //处理结构体
                                 string structVarName = G.getName().str();
                                 unsigned fieldIdx = cast<ConstantInt>(GEPOp->getOperand(2))->getZExtValue();
+                                errs() << "偏移为" << fieldIdx << "\n";
                                 // 获取结构体成员名称
                                 std::string fieldName;
-                                if (auto *StructElementTy = dyn_cast<StructType>(ST->getElementType(fieldIdx)))
-                                    fieldName = StructElementTy->getName().str();
-                                fullName = structVarName + "." + fieldName;
                                 //FIXME: 结构体里面是结构体或是数组还没有考虑到
+                                //NOTICE: 结构体里的变量在IR上没有名称，必须在调试信息里找
+                                
+                                //遍历metadata node,找结构体里的普通变量的名称
+                                //这个遍历方法是试出来的,在metadata node里一个个找，无任何遍历方法(如DFS, BFS)，不太清楚为什么getOperand()里面的数字为什么是这样
+                                //对于结构体里有个成员变量是数组的情况，该方法无法获取下标,只能获取数组名
+                                //对于结构体里有结构体的情况，该方法无法获得访问的成员结构体里的成员，只能获得成员结构体名
+                                if (auto * mn = dyn_cast<MDNode>(G.getMetadata("dbg")->getOperand(0))) {
+                                    if (auto *mn2 = dyn_cast<MDNode>(mn->getOperand(3))) {
+                                        if (auto *mn3 = dyn_cast<MDNode>(mn2->getOperand(4))) {
+                                            if (auto *mn4 = dyn_cast<MDNode>(mn3->getOperand(fieldIdx))) {
+                                                if (MDString *mds = dyn_cast<MDString>(mn4->getOperand(2))) {
+                                                    fieldName = mds->getString().str();
+                                                }
+                                            }
+                                        }
+                                    }
+                                }
+                                
+                                fullName = structVarName + "." + fieldName;
+                                errs() << fullName << "\n";
                             }
                             if (auto *AT = dyn_cast<ArrayType>(PT->getElementType())) {
                                 //处理数组
                                 string arrayVarName = G.getName().str();
                                 fullName = arrayVarName;
                                 //FIXME: 数组内容是结构体或二维数组还没有考虑到
-                                
-                                if (auto *Idx = GEPOp->getOperand(2)) {
-                                    if (auto *CIdx = dyn_cast<ConstantInt>(Idx)) {
-                                        unsigned idx = CIdx->getZExtValue();
-                                        fullName += "[" + to_string(idx) + "]";
-                                    }
-                                    else {
-                                        /*FIXME: 这里是数组下标不是常量的情况，在源代码中，它可能是变量，可能是表达式
-                                          FIXME: 现在先这样
-                                         */
-                                        fullName += "[i]";
+                                //数组里是普通变量的情况
+                                if (auto *self = GEPOp->getOperand(0)) {
+                                    //获得指向结构体的指针
+                                    if (auto *ptr = dyn_cast<PointerType>(self->getType())) {
+                                        if (auto *strptr = dyn_cast<StructType>(ptr->getElementType())) {
+                                            //如果是结构体，即结构体数组的情况
+                                            
+                                        }
+                                        else if (auto *arrptr = dyn_cast<ArrayType>(ptr->getElementType())) {
+                                            //如果是数组，即二维数组的情况
+                                            
+                                        }
+                                        else {
+                                            //如果不是数组也不是结构体
+                                            if (auto *Idx = GEPOp->getOperand(2)) {
+                                                if (auto *CIdx = dyn_cast<ConstantInt>(Idx)) {
+                                                    unsigned idx = CIdx->getZExtValue();
+                                                    fullName += "[" + to_string(idx) + "]";
+                                                }
+                                                else {
+                                                    /*FIXME: 这里是数组下标不是常量的情况，在源代码中，它可能是变量，可能是表达式
+                                                      FIXME: 现在先这样
+                                                     */
+                                                    fullName += "[i]";
+                                                }
+                                            }
+                                        }
                                     }
                                 }
+                                
                                 
                             }
                             GlobalVarInfo *g = new GlobalVarInfo(&G);
@@ -181,6 +222,14 @@ struct Mypass : public ModulePass {
     }
     void similarnameAnalysis(vector<GlobalVarInfo*> v) {
         //使用收集到的变量进行相似命名分析
+        //把所有常规变量名放入v1中
+        vector<string> namelist;
+        for (auto * va : v) {
+            if (va->getflag() == 1) {
+                namelist.push_back(va->getVariable()->getName().str());
+            }
+        }
+        //调用system("python3 /Users/mypc/Downloads/pythonProject2/NAMEPluginpost.py");
     }
     
     void brotherAnalysis(vector<GlobalVarInfo*> v) {
