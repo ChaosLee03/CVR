@@ -99,16 +99,23 @@ struct Mypass : public ModulePass {
                         }
                         //创建VarInfo对象
                         GlobalVarInfo *g = new GlobalVarInfo(&G);
+                        g->setname(G.getName().str());
                         DILocation *loc = L;
                         g->addlines(loc, rw);
                         //放入globalvarlist中
+                        //FIXME: 如果是num++这种，会把num放入两次，这两次的行号、列号、名称全部都相同,需要设置一个set，去掉完全相同的情况
                         globalvarlist.push_back(g);
                     }
                 }
                 if (auto *GEPOp = dyn_cast<GEPOperator>(U.getUser())) {
+                    //直接判断下标是不是变量，是直接跳过
+                    if (GEPOp->getNumOperands() <= 3) {
+                        continue;
+                    }
                     //如果变量是个结构体/数组
                     //先获取getelmentptr所在的语句是load还是store
                     for (auto &U2 : GEPOp->uses()) {
+                        
                         string rw;
                         Instruction *I;
                         if (I = dyn_cast<Instruction>(U2.getUser())) {
@@ -152,42 +159,92 @@ struct Mypass : public ModulePass {
                                 }
                                 
                                 fullName = structVarName + "." + fieldName;
-                                errs() << fullName << "\n";
                             }
                             if (auto *AT = dyn_cast<ArrayType>(PT->getElementType())) {
                                 //处理数组
                                 string arrayVarName = G.getName().str();
                                 fullName = arrayVarName;
-                                //FIXME: 数组内容是结构体或二维数组还没有考虑到
-                                //数组里是普通变量的情况
+                                
                                 if (auto *self = GEPOp->getOperand(0)) {
-                                    //获得指向结构体的指针
-                                    if (auto *ptr = dyn_cast<PointerType>(self->getType())) {
-                                        if (auto *strptr = dyn_cast<StructType>(ptr->getElementType())) {
-                                            //如果是结构体，即结构体数组的情况
-                                            
-                                        }
-                                        else if (auto *arrptr = dyn_cast<ArrayType>(ptr->getElementType())) {
-                                            //如果是数组，即二维数组的情况
-                                            
-                                        }
-                                        else {
-                                            //如果不是数组也不是结构体
-                                            if (auto *Idx = GEPOp->getOperand(2)) {
-                                                if (auto *CIdx = dyn_cast<ConstantInt>(Idx)) {
-                                                    unsigned idx = CIdx->getZExtValue();
-                                                    fullName += "[" + to_string(idx) + "]";
+                                    Type *ElementTypeOfAT = AT->getElementType();
+                                    errs() << *ElementTypeOfAT << " ";
+                                    //设置一个标记变量，0代表普通数组，1代表结构体数组,2代表二维数组
+                                    int ff = 0;
+                                    //plus代表名字上补上的部分，eg a[3][4]中的[4], b[4].a中的.a
+                                    string plusname = "";
+                                    if (StructType *ST = dyn_cast<StructType>(ElementTypeOfAT)) {
+                                        //进到这里说明是结构体数组
+                                        // TODO: 处理结构体数组
+                                        ff = 1;
+//                                        errs() << "is a struct\n";
+                                        //获得结构体内的偏移量
+                                        /*
+                                         for (int i = 0; i < 12; i++) {
+                                             b[i].f = i;
+                                         }这样的也处理不了,偏移量的获取是先获取下标再偏移的，而下标是常量的时候是直接获得下标的,getElementptr的参数数量是不一样的
+                                         */
+//                                        if (GEPOp->getNumOperands() <= 3) {
+//                                            continue;
+//                                        }直接在auto *GEPOp = dyn_cast<GEPOperator>(U.getUser()后判断了
+                                        unsigned fieldIdx = cast<ConstantInt>(GEPOp->getOperand(3))->getZExtValue();
+//                                        errs() << fieldIdx << " = fieldIdx\n";
+                                        if (auto *mn = dyn_cast<MDNode>(G.getMetadata("dbg")->getOperand(0))) {
+                                            mn->getOperand(3)->print(errs());
+                                            //4 -> elements 3 -> type 2 -> file 1 -> name
+//                                            errs() << "\n";
+                                            if (auto *mn2 = dyn_cast<MDNode>(mn->getOperand(3))) {
+                                                mn2->getOperand(3)->print(errs());
+//                                                errs() << "\n";
+                                                if (auto *mn3 = dyn_cast<MDNode>(mn2->getOperand(3))) {
+                                                    mn3->getOperand(4)->print(errs());
+//                                                    errs() << "\n";
+                                                    if (auto *mn4 = dyn_cast<MDNode>(mn3->getOperand(4))) {
+                                                        if (auto *mn5 = dyn_cast<MDNode>(mn4->getOperand(fieldIdx))) {
+                                                            if (MDString *mds = dyn_cast<MDString>(mn5->getOperand(2))) {
+//                                                                errs() << mds->getString().str();
+                                                                plusname = "." + mds->getString().str();
+                                                            }
+                                                        }
+                                                    }
                                                 }
-                                                else {
-                                                    /*FIXME: 这里是数组下标不是常量的情况，在源代码中，它可能是变量，可能是表达式
-                                                      FIXME: 现在先这样
-                                                     */
-                                                    fullName += "[i]";
-                                                }
+                                            }
+//                                            errs() << "\n";
+                                        }
+                                    }
+                                    else if (ArrayType *AT2 = dyn_cast<ArrayType>(ElementTypeOfAT)) {
+                                        // TODO: 处理二维数组
+                                        // 只能处理下标是常量的二维数组，下标为变量比如for (int i = 0; i < 5; i++) b[i][0] = i 会出错，
+                                        // 因为for循环里不是直接在b上取地址，而是先计算出一个变量，再getelementptr这个变量的偏移
+                                        // 与下标为常量时的getelementptr操作不同
+                                        // 遇到这种情况就跳过
+                                        ff = 2;
+//                                        if (GEPOp->getNumOperands() <= 3) {
+//                                            continue;
+//                                        }在auto *GEPOp = dyn_cast<GEPOperator>(U.getUser()后跳过
+                                        if (auto *sub2 = GEPOp->getOperand(3)) {
+                                            if (auto *CIdx = dyn_cast<ConstantInt>(sub2)) {
+                                                unsigned idx = CIdx->getZExtValue();
+                                                plusname = "[" + to_string(idx) + "]";
+                                            }
+                                            else {//实际基本执行不到
+                                                plusname = "[unknown]";
                                             }
                                         }
                                     }
+                                    if (auto *Idx = GEPOp->getOperand(2)) {
+                                        //这里的Idx是数组第一个维度的下标
+                                        if (auto *CIdx = dyn_cast<ConstantInt>(Idx)) {
+                                            unsigned idx = CIdx->getZExtValue();
+                                            fullName += "[" + to_string(idx) + "]";
+                                        }
+                                        else {
+                                            //下标不是一个ConstantInt，这种情况其实已经跳过了
+                                            fullName += "[i]";
+                                        }
+                                    }
+                                    fullName += plusname;
                                 }
+                                
                                 
                                 
                             }
