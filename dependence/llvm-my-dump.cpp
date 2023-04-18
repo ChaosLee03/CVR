@@ -14,6 +14,7 @@
 #include <llvm/IR/InstIterator.h>
 #include <llvm/IR/LLVMContext.h>
 #include <llvm/IR/Module.h>
+
 #include <llvm/Support/raw_ostream.h>
 
 #if LLVM_VERSION_MAJOR >= 4
@@ -242,6 +243,9 @@ void findcontrol(LLVMDependenceGraph *dg, LLVMNode *node) {
                     if (isa<BranchInst>(*(*it)->getValue())) {
                         nodeque.push(*it);
                     }
+                    if (isa<SwitchInst>(*(*it)->getValue())) {
+                        nodeque.push(*it);
+                    }
                 }
             }
         }
@@ -311,10 +315,35 @@ int main(int argc, char *argv[]) {
                 }
             }
         }
-
+    set<LLVMNode *> &callnodes = mygraph->getCallNodes();
+    vector<LLVMDependenceGraph *> nomaindg;
+//    for (auto &n : callnodes) {
+//        dg->buildSubgraph(n);
+//    }
+    for (auto &F : constructedFunctions) {
+            for (auto &I : F.second->getBlocks()) {
+                LLVMBBlock *BB = I.second;
+                for (LLVMNode *n : BB->getNodes()) {
+                    if (llvm::isa<llvm::CallInst>(n->getValue())) {
+                        outs() << *n->getValue() << "\n";
+                        auto *callinst = dyn_cast<CallInst>(n->getValue());
+                        if (callinst->getCalledFunction()) {
+                            string funname = callinst->getCalledFunction()->getName().str();
+                            if (funname.substr(0, 5) != "llvm.") {
+                                outs() << funname << "\n";
+//                                mygraph->build(callinst->getCalledFunction());
+                                auto *asubgraph = mygraph->buildSubgraph(n, callinst->getCalledFunction(), false);
+                                nomaindg.push_back(asubgraph);
+                            }
+                        }
+                    }
+                }
+            }
+    }
     for(auto &p : *dg) {
         if (p.first) {
             llvm::Value *value = p.first;
+//            outs() << *value << "\n";
             if (auto *Instrinst = dyn_cast<llvm::Instruction>(value)) {
                 for (int i = 0, e = Instrinst->getNumOperands(); i != e; i++) {
                     llvm::Value *op = Instrinst->getOperand(i);
@@ -337,7 +366,22 @@ int main(int argc, char *argv[]) {
             }
         }
     }
-    
+    for (auto ndg : nomaindg) {
+        for (auto &p : *ndg) {
+            if (p.first) {
+                llvm::Value *value = p.first;
+                if (auto *Instrinst = dyn_cast<llvm::Instruction>(value)) {
+                    for (int i = 0, e = Instrinst->getNumOperands(); i != e; i++) {
+                        llvm::Value *op = Instrinst->getOperand(i);
+                        if (op->hasName() && op->getName().str() == lookingforname) {
+                            findDef(mygraph, p.second);
+                            findcontrol(mygraph, p.second);
+                        }
+                    }
+                }
+            }
+        }
+    }
     outs() << lookingforname << "数据依赖于: ";
     for (auto a : vec) {
         if (a->hasName()) {
