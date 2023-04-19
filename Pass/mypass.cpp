@@ -15,6 +15,7 @@
 #include "llvm/Analysis/AliasAnalysis.h"
 #include "llvm/Support/raw_ostream.h"
 #include "llvm/Support/Debug.h"
+#include "llvm/Analysis/DependenceGraphBuilder.h"
 #include <set>
 #include <map>
 #include <fstream>
@@ -146,7 +147,15 @@ struct Mypass : public ModulePass {
                 if (auto *GEPOp = dyn_cast<GEPOperator>(U.getUser())) {
                     //直接判断下标是不是变量，是直接跳过
                     if (GEPOp->getNumOperands() <= 3) {
-                        continue;
+                        
+                        if (auto *f = dyn_cast<ConstantInt>(GEPOp->getOperand(2))) {
+                            
+                        }
+                        else {
+                            errs() << "跳过了\n";
+                            continue;
+                        }
+                        
                     }
                     //如果变量是个结构体/数组
                     //先获取getelmentptr所在的语句是load还是store
@@ -318,12 +327,6 @@ struct Mypass : public ModulePass {
         //读json格式
         //获取共享访问点
         //把收集到的变量和从json读入的变量汇总
-//        if (reader.parse(srcFile, root)) {
-//            for (int i = 0; i < root["selectedSharedVaribles"].size(); i++) {
-//                string h = root["selectedSharedVaribles"][i].asString();
-//                errs() << h << "\n";
-//            }
-//        }
     }
     void writeglobalvar() {
         //写json格式
@@ -355,6 +358,9 @@ struct Mypass : public ModulePass {
     }
     
     void distanceAnalysis(vector<GlobalVarInfo*> v) {
+        
+    }
+    void dependenceAnalysis() {
         
     }
     
