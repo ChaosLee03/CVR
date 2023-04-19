@@ -17,12 +17,17 @@
 #include "llvm/Support/Debug.h"
 #include <set>
 #include <map>
+#include <fstream>
+#include "llvm/Support/JSON.h"
+//#include "json/json.h"
+//JSON.h貌似不能编辑json，只能解析
+//看一下怎么装jsoncpp
 
 using namespace llvm;
 using namespace std;
 
 /*
- TODO: 目前需要处理二维数组，结构体数组，结构体里有数组，结构体里有结构体
+ 
  */
 
 namespace {
@@ -58,7 +63,38 @@ public:
     void setflag(int f) {flag = f;}
     //获取标志
     int getflag() {return flag;}
+    bool operator<(const GlobalVarInfo& other) const{
+        auto it = linesRW.begin();
+        auto itt = other.linesRW.begin();
+        int thisline = it->first->getLine();
+        int thatline = itt->first->getLine();
+        if (thisline != thatline) {
+            return thisline < thatline;
+        } else {
+            return name < other.name;
+        }
+    }
 };
+//有个问题，从json读入的变量无法转为GlobalVarInfo的形式
+class MyVar {
+public:
+    std::string name;
+    unsigned loc;
+    int id;
+    MyVar() {}
+    MyVar(std::string s, unsigned l, int i) : name(s), loc(l) , id(i) {}
+    bool operator<(const MyVar& other) const{
+        if (loc != other.loc) {
+            return loc < other.loc;
+        } else {
+            return name < other.name;
+        }
+    }
+};
+//读取json文件,获取共享访问点
+void readjsonfile();
+//将收集到的变量存放起来
+void writeglobalvar();
 //相似命名分析
 void similarnameAnalysis(vector<GlobalVarInfo*> v);
 //依赖分析
@@ -274,8 +310,33 @@ struct Mypass : public ModulePass {
                 errs() << "读写类型: " << p.second << "\n";
             }
         }
+//        readjsonfile();
         similarnameAnalysis(globalvarlist);
         return false;
+    }
+    void readjsonfile() {
+        //读json格式
+        //获取共享访问点
+        //把收集到的变量和从json读入的变量汇总
+//        if (reader.parse(srcFile, root)) {
+//            for (int i = 0; i < root["selectedSharedVaribles"].size(); i++) {
+//                string h = root["selectedSharedVaribles"][i].asString();
+//                errs() << h << "\n";
+//            }
+//        }
+    }
+    void writeglobalvar() {
+        //写json格式
+        //{
+        //    "global_var": [
+        //     {
+        //       "name": XXX,
+        //       "line": XXX,
+        //       "RW": R/W
+        //     }...
+        //    ]
+        //}
+        
     }
     void similarnameAnalysis(vector<GlobalVarInfo*> v) {
         //使用收集到的变量进行相似命名分析
@@ -303,4 +364,4 @@ struct Mypass : public ModulePass {
 };
 }
 char Mypass::ID = 0;
-static RegisterPass<Mypass> X ("Mypass", "This is for generating  the CFG");
+static RegisterPass<Mypass> X ("Mypass", "Mypass");//第一个参数代表在命令行里加上 -Mypass 可以调用本pass，第二个代表描述本pass的信息
