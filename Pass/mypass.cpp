@@ -278,6 +278,7 @@ struct Mypass : public ModulePass {
                                     }
                                     if (auto *Idx = GEPOp->getOperand(2)) {
                                         //这里的Idx是数组第一个维度的下标
+                                        errs() << "是个常规数组\n";
                                         if (auto *CIdx = dyn_cast<ConstantInt>(Idx)) {
                                             unsigned idx = CIdx->getZExtValue();
                                             fullName += "[" + to_string(idx) + "]";
